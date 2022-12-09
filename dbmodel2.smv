@@ -1,0 +1,96 @@
+MODULE mem_process(l_num,a_cell,b_cell)
+
+ VAR
+ 	state : array 1..2 of {"WW","WR","W","R","NOP"};
+	op_lock : {"W_1","R_1","W_2","R_2","NOP"};
+ 	mem_cell: array 1..2 of word[4]; 
+	DEFINE WR_1 := state[1] = "WR" & a_cell.rlock = l_num; 
+	DEFINE WW_1 := state[1] = "WW" & a_cell.wlock = l_num; 
+	DEFINE WR_2 := state[2] = "WR" & b_cell.rlock = l_num; 
+	DEFINE WW_2 := state[2] = "WW" & b_cell.wlock = l_num; 
+ ASSIGN
+ 	init(state[1]) := "NOP";
+ 	init(state[2]) := "NOP";
+	init(op_lock) := "NOP";
+	init(mem_cell[1]) := 0b_0000;
+	init(mem_cell[2]) := 0b_0000;
+	next(state[1]) := case
+		a_cell.wlock = l_num & state[1] = "WW" & op_lock = "W_1": "W";
+		a_cell.rlock = l_num & state[1] = "WR" & op_lock = "R_1" : "R";
+		TRUE : {"WW","WR","NOP"};
+		esac;
+	next(state[2]) := case
+		b_cell.wlock = l_num & state[2] = "WW" & op_lock = "W_1": "W";
+		b_cell.rlock = l_num & state[2] = "WR" & op_lock = "R_1" : "R";
+		TRUE : {"WW","WR","NOP"};
+		esac;
+	next(op_lock) := case
+		WR_1 & WR_2 : {"R_1","R_2"};
+		WR_1 & WW_2 : {"R_1","W_2"};
+		WW_1 & WR_2 : {"W_1","R_2"};
+		WW_1 & WW_2 : {"W_1","W_2"};
+		WR_1 : "R_1";
+		WW_1 : "W_1";
+		WR_2 : "R_2";
+		WW_2 : "W_2";
+		TRUE: "NOP";
+	esac;
+	next(mem_cell[1]) := case
+		op_lock = "R_1" & state[1] = "R": a_cell.cell[1];
+		op_lock = "R_2" & state[2] = "R": b_cell.cell[1];
+		TRUE: mem_cell[1];
+	esac;
+	next(mem_cell[2]) := case
+		op_lock = "R_1" & state[1] = "R": a_cell.cell[2];
+		op_lock = "R_2" & state[2] = "R": b_cell.cell[2];
+		TRUE: mem_cell[2];
+	esac;
+
+MODULE cell_block(c_num,proc1,proc2)
+ VAR
+ 	cell: array 1..2 of word[4];
+	wlock: {0,1,2};
+	rlock: {0,1,2};
+	DEFINE proc1_state := c_num = 1 ? proc1.state[1] : proc1.state[2];
+	DEFINE proc2_state := c_num = 1 ? proc2.state[1] : proc2.state[2];
+	DEFINE P_WW := proc1_state = "WW" & proc2_state = "WW";
+	DEFINE P_WR := proc1_state = "WR" & proc2_state = "WR";
+ ASSIGN
+ 	init(cell[1]) := 0b_0000;
+ 	init(cell[2]) := 0b_0000;
+	init(wlock) := 0;
+	init(rlock) := 0;
+	next(wlock) := case
+		P_WW & wlock=0 : {1,2};
+		proc1_state = "WW" & wlock = 1: 1;
+		proc2_state = "WW" & wlock = 2: 2;
+		proc1_state = "WW": 1;
+		proc2_state = "WW": 2;
+		TRUE: 0;
+		esac;
+	next(rlock) := case
+		P_WR & rlock=0 : {1,2};
+		proc1_state = "WR" & rlock = 1: 1;
+		proc2_state = "WR" & rlock = 2: 2;
+		proc1_state = "WR": 1;
+		proc2_state = "WR": 2;
+		TRUE: 0;
+		esac;
+	next(cell[1]) := case
+		proc1_state = "W" : (proc1.mem_cell[1] + proc1.mem_cell[2] + 0b_0001) + proc1.mem_cell[1];
+		proc2_state = "W" : proc2.mem_cell[1];
+		TRUE: cell[1];
+		esac;
+	next(cell[2]) := case
+		proc2_state = "W" : (proc2.mem_cell[1] + proc2.mem_cell[2] + 0b_0001) + proc2.mem_cell[2];
+		proc1_state = "W" : proc1.mem_cell[2];
+		TRUE: cell[2];
+		esac;
+
+
+MODULE main
+ VAR
+ 	p1: mem_process(1,acell,bcell);
+	p2: mem_process(2,acell,bcell);
+	acell: cell_block(1,p1,p2);
+	bcell: cell_block(2,p1,p2);

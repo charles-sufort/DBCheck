@@ -1,0 +1,20 @@
+MODULE cell(i)
+  VAR
+	b : boolean;
+	a_H: array 0..1 of boolean;
+	DEFINE a_i := i = 1 ? a_H[1]: a_H[0];
+  ASSIGN
+	init(b) := FALSE;
+	init(a_H[0]) := FALSE;
+	init(a_H[1]) := FALSE;
+	next(a_H[0]) := a_H[1];
+	next(a_H[1]) := case
+		i = 1: TRUE;
+		TRUE: FALSE;
+	esac;
+	next(b) := i = 1;
+
+
+MODULE main
+  VAR
+   cell1: cell(val);
