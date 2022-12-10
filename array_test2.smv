@@ -1,0 +1,24 @@
+MODULE arr_i(arr)
+ VAR
+	i : 1..4;
+ ASSIGN
+  init(i) := 1;
+  next(i) := case
+  	  arr[i] = 2: 1;
+	  TRUE: (i mod 4) + 1;	
+  esac;
+
+MODULE main
+ VAR
+	arr1 : array 1..4 of 1..4;	
+	arr_i1 : arr_i(arr1);
+
+ ASSIGN
+	init(arr1[1]) := 1;
+	init(arr1[2]) := 2;
+	init(arr1[3]) := 3;
+	init(arr1[4]) := 4;
+	next(arr1[1]) := arr1[1];
+	next(arr1[2]) := arr1[2];
+	next(arr1[3]) := arr1[3];
+	next(arr1[4]) := arr1[4];

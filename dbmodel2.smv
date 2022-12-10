@@ -15,13 +15,13 @@ MODULE mem_process(l_num,a_cell,b_cell)
 	init(mem_cell[1]) := 0b_0000;
 	init(mem_cell[2]) := 0b_0000;
 	next(state[1]) := case
-		a_cell.wlock = l_num & state[1] = "WW" & op_lock = "W_1": "W";
-		a_cell.rlock = l_num & state[1] = "WR" & op_lock = "R_1" : "R";
+		WW_1 & op_lock = "W_1": "W";
+		WR_1 & op_lock = "R_1" : "R";
 		TRUE : {"WW","WR","NOP"};
 		esac;
 	next(state[2]) := case
-		b_cell.wlock = l_num & state[2] = "WW" & op_lock = "W_1": "W";
-		b_cell.rlock = l_num & state[2] = "WR" & op_lock = "R_1" : "R";
+		WW_2 & op_lock = "W_2": "W";
+		WR_2 & op_lock = "R_2" : "R";
 		TRUE : {"WW","WR","NOP"};
 		esac;
 	next(op_lock) := case
@@ -94,3 +94,10 @@ MODULE main
 	p2: mem_process(2,acell,bcell);
 	acell: cell_block(1,p1,p2);
 	bcell: cell_block(2,p1,p2);
+ SPEC (p1.state[1] = "WW" & p1.op_lock = "W_1" & acell.wlock = 1) -> (AX p1.state[1] = "W")
+ SPEC (p1.state[2] = "WW" & p1.op_lock = "W_2" & acell.wlock = 1) -> (AX p1.state[2] = "W")
+ SPEC (p2.state[1] = "WW" & p2.op_lock = "W_1" & acell.wlock = 2) -> (AX p2.state[1] = "W")
+ SPEC (p2.state[2] = "WW" & p2.op_lock = "W_2" & acell.wlock = 2) -> (AX p2.state[2] = "W")
+
+
+
