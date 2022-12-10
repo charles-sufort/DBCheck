@@ -1,0 +1,87 @@
+MODULE main
+ VAR
+	thr1 : {"W","R","NOP","WR","WW"};
+	thr2 : {"W","R","NOP","WR","WW"};
+	mem1_1 : word[4];
+	mem1_2 : word[4];
+	mem2_1 : word[4];
+	mem2_2 : word[4];
+	a_cell_1:  word[4]; 
+	a_cell_2:  word[4]; 
+	wlock : {1,2,0};
+	rlock : {1,2,0};
+	DEFINE p1 := (((a_cell_1+a_cell_2+0b_0001) = 0b_0001)|((a_cell_1+a_cell_2+0b_0001) = 0b_0010)|((a_cell_1+a_cell_2+0b_0001) = 0b_0100)|((a_cell_1+a_cell_2+0b_0001) = 0b_1000)|((a_cell_1+a_cell_2+0b_0001) = 0b_0000));
+ ASSIGN
+	init(thr1) := "NOP";
+	init(thr2) := "NOP";
+	init(wlock) := 0;
+	init(rlock) := 0;
+	init(mem1_1) := 0b_0000;
+	init(mem1_2) := 0b_0000;
+	init(mem2_1) := 0b_0000;
+	init(mem2_2) := 0b_0000;
+	init(a_cell_1) := 0b_0000;
+	init(a_cell_2) := 0b_0000;
+	next(wlock) := case
+		thr1 = "W": 0;
+		thr2 = "W": 0;
+		thr1 = "WW" & thr2 = "WW" & wlock = 1: 1;
+		thr1 = "WW" & thr2 = "WW" & wlock = 2: 2;
+		thr1 = "WW" & thr2 = "WW" : {1,2};
+		thr1 = "W" : 1;
+		thr2 = "W" : 2;
+		thr1 = "WW": 1;
+		thr2 = "WW": 2;
+		TRUE: 0;
+		esac;
+	next(rlock) := case
+		thr1 = "R": 0;
+		thr2 = "R": 0;
+		thr1 = "WR" & thr2 = "WR" & rlock = 1: 1;
+		thr1 = "WR" & thr2 = "WR" & rlock = 2: 2;
+		thr1 = "WR" & thr2 = "WR" : {1,2};
+		thr1 = "R": 1;
+		thr2 = "R": 2;
+		thr1 = "WR": 1 ;
+		thr2 = "WR": 2 ;
+		TRUE: 0;
+		esac;
+	next(thr1) := case
+		wlock = 1 & thr1 = "WW": "W";
+		rlock = 1 & thr1 = "WR": "R";
+		TRUE : {"WW","WR","NOP"};
+		esac;
+	next(thr2) := case
+		wlock = 2 & thr2 = "WW": "W";
+		rlock = 2 & thr2 = "WR": "R";
+		TRUE : {"WW","WR","NOP"};
+		esac;
+	next(mem1_1) := case
+		thr1 = "R": a_cell_1;
+		TRUE: mem1_1;
+	esac;
+	next(mem1_2) := case
+		thr1 = "R": a_cell_2;
+		TRUE: mem1_2;
+	esac;
+	next(mem2_1) := case
+		thr2 = "R": a_cell_1;
+		TRUE: mem2_1;
+	esac;
+	next(mem2_2) := case
+		thr2 = "R": a_cell_2;
+		TRUE: mem2_2;
+	esac;
+	next(a_cell_1) := case
+		thr1 = "W": (mem1_1+mem1_2+0b_0001)+mem1_1;
+		thr2 = "W": mem2_1;
+		TRUE: a_cell_1;
+	esac;
+	next(a_cell_2) := case
+		thr2 = "W": (mem2_2+mem2_2+0b_0001)+mem2_2;
+		thr1 = "W": mem1_2;
+		TRUE: a_cell_2;
+	esac;
+ SPEC AG !(thr1 = "W" & thr2 = "W")
+ SPEC AG p1
+  

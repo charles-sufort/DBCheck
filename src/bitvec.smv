@@ -1,0 +1,18 @@
+MODULE main
+VAR
+	vec1 : unsigned word[4];
+	vec2 : unsigned word[4];
+	lock : {1,2};
+ASSIGN
+	init(lock) := {1,2};
+	init(vec1) := 0b_0000;
+	init(vec2) := 0b_0000;
+	next(lock) := {1,2};
+	next(vec1) := case
+		lock = 1 : (vec1+vec2+0b_0001) + vec1;
+		TRUE: vec1;
+		esac;
+	next(vec2) := case
+		lock = 2 : (vec1+vec2+0b_0001) + vec2;
+		TRUE: vec2;
+		esac;

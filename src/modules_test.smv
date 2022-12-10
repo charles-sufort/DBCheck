@@ -1,0 +1,27 @@
+MODULE a_cell(k)
+	VAR
+		i : {1,2,3};
+	ASSIGN
+		init(i) := {1,2};
+		next(i) := case
+			k = 2: 2;
+			TRUE: {1,2,3};
+		esac;
+
+MODULE main
+	VAR
+		a1: a_cell(a2.i);
+		a2: a_cell(a1.i);
+	
+		
+		
+		
+		
+
+
+		
+		
+	
+	
+
+

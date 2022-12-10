@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.0.0">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>20</x>
+      <y>20</y>
+      <w>370</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>mem_process1
+--
+state: 2x {"WW","WR","W","R","NOP"}
+mem_cell: 2x word[4]
+op_c: 1..4
+finished: boolean
+schedule: 4x {"W_1","R_1","R_2","W_2","NOP"}
+
+ok</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>20</x>
+      <y>190</y>
+      <w>370</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>mem_process1
+--
+mem_cell: 2x word[4]
+lock: {0,1,2}
+
+
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>
