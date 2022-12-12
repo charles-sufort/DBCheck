@@ -1,0 +1,9 @@
+MODULE main
+ VAR 
+ 	v1: word[4];
+	DEFINE t := v1 < 0b_0011;
+	DEFINE m := (0b_0100 & v1) = 0b_0100;
+	DEFINE b1 := (v1 xor 2);
+ ASSIGN
+ 	init(v1) := 0b_1111;
+	next(v1) := v1 >> 1;

@@ -1,0 +1,27 @@
+MODULE scheduler(o,s1_w,s1_r,s2_w,s2_r)
+ VAR
+	p1_w : array 1..2 of word[4];
+	p1_r : array 1..2 of word[4];
+	p2_w : array 1..2 of word[4];
+	p2_r : array 1..2 of word[4];
+	op: {"NOP","P1_R1", "P1_R2","P1_W1", "P1_W2",
+	"P2_R1", "P2_R2","P2_W1", "P2_W2"};
+	op_n : 1..8;
+	op_c: 1..8;
+	DEFINE i_1 := o = 1 ? 1 : 2;
+	DEFINE i_2 := o = 1 ? 2 : 1;
+
+		
+ ASSIGN
+	init(p1_w[1]) := s1_w[1];
+	init(p1_w[2]) := s1_w[2];
+	init(p1_r[1]) := s1_r[1];
+	init(p1_r[2]) := s1_r[2];
+	init(p2_w[1]) := s2_w[1];
+	init(p2_w[2]) := s2_w[2];
+	init(p2_r[1]) := s2_r[1];
+	init(p2_r[2]) := s2_r[2]
+
+
+
+

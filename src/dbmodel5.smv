@@ -1,0 +1,203 @@
+MODULE log(p1,p2)
+ VAR
+	w_hist_1: array 1..2 of word[8];
+	r_hist_1: array 1..2 of word[8];
+	w_hist_2: array 1..2 of word[8];
+	r_hist_2: array 1..2 of word[8];
+	op_c: word[8];
+ ASSIGN
+	init(w_hist_1[1]) := 0b_00000000;
+	init(w_hist_1[2]) := 0b_00000000;
+	init(r_hist_1[1]) := 0b_00000000;
+	init(r_hist_1[2]) := 0b_00000000;
+	init(w_hist_2[1]) := 0b_00000000;
+	init(w_hist_2[2]) := 0b_00000000;
+	init(r_hist_2[1]) := 0b_00000000;
+	init(r_hist_2[2]) := 0b_00000000;
+	init(op_c) := 0b_10000000;
+	next(op_c) := case
+		p1.op_state | p2.op_state: op_c >> 1;
+		TRUE: op_c;
+	esac;
+	next(w_hist_1[1]) := case
+		p1.state[1] = "W": w_hist_1[1] + (0b_11111111 & op_c);
+		TRUE: w_hist_1[1];
+	esac;
+	next(w_hist_1[2]) := case
+		p1.state[2] = "W": w_hist_1[2] + (0b_11111111 & op_c);
+		TRUE: w_hist_1[2];
+	esac;
+	next(w_hist_2[1]) := case
+		p2.state[1] = "W": w_hist_2[1] + (0b_11111111 & op_c);
+		TRUE: w_hist_2[1];
+	esac;
+	next(w_hist_2[2]) := case
+		p2.state[2] = "W": w_hist_2[2] + (0b_11111111 & op_c);
+		TRUE: w_hist_2[2];
+	esac;
+	next(r_hist_1[1]) := case
+		p1.state[1] = "R": r_hist_1[1] + (0b_11111111 & op_c);
+		TRUE: r_hist_1[1];
+	esac;
+	next(r_hist_1[2]) := case
+		p1.state[2] = "R": r_hist_1[2] + (0b_11111111 & op_c);
+		TRUE: r_hist_1[2];
+	esac;
+	next(r_hist_2[1]) := case
+		p2.state[1] = "R": r_hist_2[1] + (0b_11111111 & op_c);
+		TRUE: r_hist_2[1];
+	esac;
+	next(r_hist_2[2]) := case
+		p2.state[2] = "R": r_hist_2[2] + (0b_11111111 & op_c);
+		TRUE: r_hist_2[2];
+	esac;
+
+
+MODULE mem_process1(l_num,a_cell,b_cell,s_w,s_r)
+ VAR
+ 	state : array 1..2 of {"WW","WR","W","R","NOP"};
+ 	mem_cell: array 1..2 of word[4]; 
+	w_sched: array 1..2 of word[4];
+	r_sched: array 1..2 of word[4];
+	op_c: word[4];
+	finished: boolean;
+	DEFINE op_state := state[1] = "W" | state[1] = "R" | state[2] = "W" | state[2] = "R";
+	DEFINE nop_state := (state[1] = "NOP" & state[2] = "NOP") ;
+	DEFINE nop_sched := ((s_w[1] & op_c)=0b_0000)  & ((s_w[2] & op_c)=0b_0000) & ((s_r[1] & op_c)=0b_0000) & ((s_r[2] & op_c)=0b_0000);
+ ASSIGN
+	init(state[1]) := "NOP";
+	init(state[2]) := "NOP";
+	init(mem_cell[1]) := 0b_0000;
+	init(mem_cell[2]) := 0b_0000;
+	init(w_sched[1]) := s_w[1];
+	init(w_sched[2]) := s_w[2];
+	init(r_sched[1]) := s_r[1];
+	init(r_sched[2]) := s_r[2];
+	init(op_c) := 0b_1000;
+	init(finished):= FALSE;
+	next(op_c) := case
+		op_c = 0b_0000: op_c;
+		op_state : op_c >> 1;
+		nop_state & nop_sched	: op_c >> 1;
+		TRUE : op_c;
+	esac;
+	next(finished):= case
+		finished : finished;
+		(s_r[1] = 0b_0000 & s_r[2] = 0b_0000 & s_w[1] = 0b_0000 & s_w[2] = 0b_0000) :  TRUE;
+		op_state & op_c = 0b_0001: TRUE;
+		TRUE: FALSE;
+	esac;
+	next(w_sched[1]) := case
+		op_state : w_sched[1] << 1;
+		nop_state & nop_sched: w_sched[1] << 1;
+		TRUE : w_sched[1];
+	esac;
+	next(w_sched[2]) := case
+		op_state : w_sched[2] << 1;
+		nop_state & nop_sched: w_sched[2] << 1;
+		TRUE : w_sched[2];
+	esac;
+	next(r_sched[1]) := case
+		op_state : r_sched[1] << 1;
+		nop_state & nop_sched: r_sched[1] << 1;
+		TRUE : r_sched[1];
+	esac;
+	next(r_sched[2]) := case
+		op_state : r_sched[2] << 1;
+		nop_state & nop_sched: r_sched[2] << 1; 
+		TRUE : r_sched[2];
+	esac;
+	next(state[1]) := case
+		state[1] = "R" | state[1] = "W" : "NOP";
+		state[1] = "WR" & a_cell.lock = l_num : "R";
+		state[1] = "WW" & a_cell.lock = l_num : "W";
+		! finished & ((s_r[1] & op_c) = op_c)   : "WR";
+		! finished & ((s_w[1] & op_c) = op_c)   : "WW";
+		! finished & ((s_r[1] & op_c) = 0b_0000)   & ((s_w[1] & op_c) = 0b_0000	) : "NOP";
+		state[1] = "WR" | state[1] = "WW" : state[1];
+		TRUE: "NOP";
+	esac;
+	next(state[2]) := case
+		state[2] = "R" | state[2] = "W" : "NOP";
+		state[2] = "WR" & b_cell.lock = l_num : "R";
+		state[2] = "WW" & b_cell.lock = l_num : "W";
+		! finished & ((s_r[2] & op_c) = op_c)   : "WR";
+		! finished & ((s_w[2] & op_c) = op_c)   : "WW";
+		! finished & ((s_r[2] & op_c) = 0b_0000)   & ((s_w[2] & op_c) = 0b_0000	) : "NOP";
+		state[2] = "WR" | state[2] = "WW" : state[2];
+		TRUE: "NOP";
+	esac;
+	next(mem_cell[1]) := case
+		state[1] = "R": a_cell.cell[1];
+		state[2] = "R": b_cell.cell[1];
+		TRUE: mem_cell[1];
+	esac;
+	next(mem_cell[2]) := case
+		state[1] = "R": a_cell.cell[2];
+		state[2] = "R": b_cell.cell[2];
+		TRUE: mem_cell[2];
+	esac;
+	
+MODULE mem_block1(c_num,proc1,proc2,o)
+ VAR
+ 	cell: array 1..2 of word[4];
+	lock: {0,1,2};
+ ASSIGN
+ 	init(cell[1]) := 0b_0000;
+ 	init(cell[2]) := 0b_0000;
+	init(lock) := 0;
+	next(lock) := case
+		proc1.state[c_num] = "W" | proc1.state[c_num] = "R" | proc2.state[c_num] = "W" | proc2.state[c_num] = "R" : 0; 
+		(proc1.state[c_num] = "WW" | proc1.state[c_num] = "WR" ) & (lock = 1) : 1;
+		(proc2.state[c_num] = "WW" | proc2.state[c_num] = "WR" ) & (lock = 2) : 2;
+		o = 1 & proc1.state[c_num] = "WW" : {0,1};
+
+		o = 1 & proc1.state[c_num] = "WR" & proc2.state[c_num] = "WR" & proc1.w_sched[c_num] = 0b_0000 : {1,2};
+		o = 1 & proc1.state[c_num] = "WR" & proc2.state[c_num] = "WR" : {0,1};
+		o = 1 & proc1.state[c_num] = "WR" & proc2.state[c_num] = "WW" : {0,1};
+		o = 1 & proc2.state[c_num] = "WR" & proc1.w_sched[c_num] != 0b_0000 : 0;
+		o = 1 & proc2.state[c_num] = "WW" & (proc1.w_sched[c_num] != 0b_0000 | proc1.r_sched[c_num] != 0b_0000) : 0;
+		o = 2 & proc2.state[c_num] = "WW" : {0,2};
+		o = 2 & proc2.state[c_num] = "WR" & proc1.state[c_num] = "WR" & proc2.w_sched[c_num] = 0b_0000 : {1,2};
+		o = 2 & proc2.state[c_num] = "WR" & proc1.state[c_num] = "WR" : {0,2};
+		o = 2 & proc2.state[c_num] = "WR" & proc1.state[c_num] = "WW" : {0,2};
+		o = 2 & proc1.state[c_num] = "WR" & proc2.w_sched[c_num] != 0b_0000 : 0;
+		o = 2 & proc1.state[c_num] = "WW" & (proc2.w_sched[c_num] != 0b_0000 | proc2.r_sched[c_num] != 0b_0000) : 0;
+		(proc1.state[c_num] = "WW" |  proc1.state[c_num] = "WR"): {0,1};
+		(proc2.state[c_num] = "WW" |  proc2.state[c_num] = "WR"): {0,2};
+		TRUE: 0;
+		esac;
+	next(cell[1]) := case
+		proc1.state[c_num] = "W" : (proc1.mem_cell[1] + proc1.mem_cell[2] + 0b_0001) + proc1.mem_cell[1];
+		proc2.state[c_num] = "W" : proc2.mem_cell[1];
+		TRUE: cell[1];
+		esac;
+	next(cell[2]) := case
+		proc2.state[c_num] = "W" : (proc2.mem_cell[1] + proc2.mem_cell[2] + 0b_0001) + proc2.mem_cell[2];
+		proc1.state[c_num] = "W" : proc1.mem_cell[2];
+		TRUE: cell[2];
+		esac;
+
+MODULE main
+ VAR
+	S1_w: array 1..2 of word[4];
+	S1_r: array 1..2 of word[4];
+ 	S2_w: array 1..2 of word[4];
+ 	S2_r: array 1..2 of word[4];
+ 	p1: mem_process1(1,acell,bcell,S1_w,S1_r);
+	p2: mem_process1(2,acell,bcell,S2_w,S2_r);
+	acell: mem_block1(1,p1,p2,1);
+	bcell: mem_block1(2,p1,p2,1);
+	l: log(p1,p2);
+ ASSIGN
+	S1_w[1] := 0b_0000;
+	S1_r[1] := 0b_1100;
+	S1_w[2] := 0b_0000; 
+	S1_r[2] := 0b_0010; 
+	S2_w[1] := 0b_0000;
+	S2_r[1] := 0b_1110;
+	S2_w[2] := 0b_0000; 
+	S2_r[2] := 0b_0000; 
+
+ SPEC AG !(p1.state[1] = "WW" & p1.state[2] = "WW")
+
