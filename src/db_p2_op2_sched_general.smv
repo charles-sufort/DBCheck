@@ -151,25 +151,19 @@ MODULE mem_block1(c_num,proc1,proc2,o)
 		esac;
 
 MODULE main
+ FROZENVAR S1_w: array 1..2 of word[2];
+ FROZENVAR S1_r: array 1..2 of word[2];
+ FROZENVAR S2_w: array 1..2 of word[2];
+ FROZENVAR S2_r: array 1..2 of word[2];
+ DEFINE S1_s := ((S1_w[1] & S1_w[2]) = 0b_00) & ((S1_r[1] & S1_r[2]) = 0b_00) & (((S1_w[1] | S1_w[2]) & (S1_r[1] | S1_r[2])) = 0b_00);
+ DEFINE S2_s := ((S2_w[1] & S2_w[2]) = 0b_00) & ((S2_r[1] & S2_r[2]) = 0b_00) & (((S2_w[1] | S2_w[2]) & (S2_r[1] | S2_r[2])) = 0b_00); 
  VAR
-	S1_w: array 1..2 of word[2];
-	S1_r: array 1..2 of word[2];
- 	S2_w: array 1..2 of word[2];
- 	S2_r: array 1..2 of word[2];
  	p1: mem_process1(1,acell,bcell,S1_w,S1_r);
 	p2: mem_process1(2,acell,bcell,S2_w,S2_r);
-	acell: mem_block1(1,p1,p2,1);
-	bcell: mem_block1(2,p1,p2,1);
+	o : 1..2;
+	acell: mem_block1(1,p1,p2,o);
+	bcell: mem_block1(2,p1,p2,o);
 	l: log(p1,p2);
- ASSIGN
-	S1_w[1] := 0b_10;
-	S1_r[1] := 0b_01;
-	S1_w[2] := 0b_00; 
-	S1_r[2] := 0b_00; 
-	S2_w[1] := 0b_10;
-	S2_r[1] := 0b_01;
-	S2_w[2] := 0b_00; 
-	S2_r[2] := 0b_00; 
-
- SPEC (o = 1) -> ((p2.state[1] = "W")-> ( !( EF p1.state[1] = "W" )))
+  
+SPEC ((o = 1) & S1_s & S1_s) -> ((p2.state[1] = "W")-> ( !( EF p1.state[1] = "W" )))
 

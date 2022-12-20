@@ -161,15 +161,4 @@ MODULE main
 	acell: mem_block1(1,p1,p2,1);
 	bcell: mem_block1(2,p1,p2,1);
 	l: log(p1,p2);
- ASSIGN
-	S1_w[1] := 0b_10;
-	S1_r[1] := 0b_01;
-	S1_w[2] := 0b_00; 
-	S1_r[2] := 0b_00; 
-	S2_w[1] := 0b_10;
-	S2_r[1] := 0b_01;
-	S2_w[2] := 0b_00; 
-	S2_r[2] := 0b_00; 
-
- SPEC (o = 1) -> ((p2.state[1] = "W")-> ( !( EF p1.state[1] = "W" )))
 
