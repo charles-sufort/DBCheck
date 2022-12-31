@@ -1,14 +1,15 @@
 import sys
-import os, re
+import os, re, json
 import io
 from contextlib import redirect_stdout
 from time import time
+from pprint import pprint
 
 def gen_schedules(n):
     S_i = []
     for i in range(4):
         s_i = []
-        for j in range(4):
+        for j in range(5):
             if i == j:
                 s_i.append(["1"])
             else:
@@ -46,12 +47,18 @@ def gen_schedule_smv(s,model):
         T += L
     if model == "sched":
         T += "    o := 1;\n\n" 
-    T += " SPEC AG((p2.state[1] = \"W\")-> ( ( !EF p1.state[1] = \"W\" )))\n"
-    T += " SPEC AG((p2.state[2] = \"W\")-> ( ( !EF p1.state[1] = \"W\" )))\n"
-    T += " SPEC AG((p2.state[1] = \"W\")-> ( ( !EF p1.state[1] = \"R\" )))\n"
-    T += " SPEC AG((p2.state[2] = \"W\")-> ( ( !EF p1.state[1] = \"R\" )))\n"
-    T += " SPEC AG((p2.state[1] = \"R\")-> ( ( !EF p1.state[1] = \"W\" )))\n"
-    T += " SPEC AG((p2.state[2] = \"R\")-> ( ( !EF p1.state[1] = \"W\" )))\n"
+
+    # Deadlock
+    T += " SPEC AF( p1.finished & p2.finished)\n "
+    # WW,WR,RW 
+    E = [["\"W\"","\"W\""],["\"R\"","\"W\""],["\"W\"","\"R\""]]
+    for e in E:
+        for i in range(2):
+            for j in range(2):
+                i_1 = (i%2)+1
+                i_2 = ((i+1)%2)+1
+                T += " SPEC AG((p{}.state[{}] = {})-> ( ( !EF ((p{}.state[{}] = {}) & (!(p{}.finished)) ))))\n".format(i_1,j+1,e[0],i_2,j+1,e[1],i_1)
+
     return T
 
 def get_base(n,t):
@@ -62,14 +69,23 @@ def get_base(n,t):
     base_text += "\n"
     return base_text
 
+def get_smv_base(path):
+    base_text = ""
+    with open(path,"r") as fo:
+        base_text += fo.read()
+    base_text += "\n"
+    return base_text
+
+
 def test_smv(Si, base_text,i,n,k,model):
     text = base_text
     text += gen_schedule_smv(Si,model)
-    smv_file = "db_p2_op{}_{}_{}_{}.smv".format(k,model,i,n)
+    smv_file = "test.smv"
     path = "tmp/{}".format(smv_file)
     with open(path,"w") as fo:
         fo.write(text)
     cmd = "NuSMV {} > tmp/results.out".format(path)
+
     os.system(cmd)
     results = ""
     with open("tmp/results.out",'r') as fo:
@@ -82,26 +98,33 @@ def test_smv(Si, base_text,i,n,k,model):
 
 def results_update(R,Ri,i,n):
     for s in Ri[0]:
-        R[s] += 1
+        R[s][0] += 1
+    for s in Ri[1]:
+        R[s][1].append(i)
     print("iteration {} / {}".format(i+1,n))
     for s in R:
-        print("spec {}: {}/{}".format(s,R[s],i+1 ))
+        print("spec {}: {}/{}".format(s,R[s][0],i+1))
+
+def results_save(R,name):
+    path = "tmp/" + name
+    with open(path,'w') as fo:
+        json.dump(R,fo)
+
         
 
 if __name__ == "__main__":
 #    n = sys.argv[1]
 #    t = sys.argv[2]
-#    base_file = "db_p2_op{}_{}_base.smv".format(n,t)  
-    k = 6
-    model = "sched"
-    base_text = get_base(k,model)
+    model = sys.argv[1]
+    k = int(sys.argv[2])
+    path = "db_p2_op{}_{}_base.smv".format(str(k),model)
+    base_text = get_smv_base(path)
     S = gen_schedules(k)
     print(len(S))
+    pprint(S[:4])
     R = {}
-    #for i in range(len(S)):
-    i = 0
     start = time()
-    R_0 = test_smv(S[0],base_text,i,len(S),k,model)
+    R_0 = test_smv(S[0],base_text,0,len(S),k,model)
     finish = time()
     print("{} : {}".format(S[0],finish-start))
     mn = len(S)*(finish - start)/(60)
@@ -109,11 +132,14 @@ if __name__ == "__main__":
     print(mn)
     print(hr)
     for s in R_0[0]:
-        R[s] = 1
+        R[s] = [1,[]]
     for s in R_0[1]:
-        R[s] = 0
-#       for i in range(1,len(S)):
-#           R_i = test_smv(S[i],base_text,i,len(S),k,model)
-#           results_update(R,R_i,i,len(S))
+        R[s] = [0,[]]
+    for i in range(1,len(S)):
+        R_i = test_smv(S[i],base_text,i,len(S),k,model)
+        results_update(R,R_i,i,len(S))
+    R["S"] = S
+    file_name = "db_p2_op{}_{}_base.json".format(str(k),model)
+    results_save(R,file_name)
 
  

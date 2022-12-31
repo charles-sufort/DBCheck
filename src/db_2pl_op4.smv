@@ -18,7 +18,6 @@ MODULE mem_process1(l_num,a_cell,b_cell,s_w,s_r)
 	init(state[2]) := "NOP";
 	init(op_c) := 0b_1000;
 	init(finished):= FALSE;
-	init(phase) := 1;
 	init(locks) := (((s_w[1] = 0b_0000)|(s_r[1] = 0b_0000))&((s_w[2] = 0b_0000)|(s_r[2] = 0b_0000))) ? "12" : (((s_w[1] = 0b_0000)|(s_r[1] = 0b_0000)) ? "1" : "2" );
 	next(op_c) := case
 		op_c = 0b_0000: op_c;

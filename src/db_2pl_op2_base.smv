@@ -1,0 +1,89 @@
+MODULE mem_process1(l_num,a_cell,b_cell,s_w,s_r)
+ VAR
+ 	state : array 1..2 of {"WW","WR","W","R","NOP"};
+	op_c : word[2];
+	finished: boolean;
+	DEFINE op_state := state[1] = "W" | state[1] = "R" | state[2] = "W" | state[2] = "R";
+	DEFINE nop_state := (state[1] = "NOP" & state[2] = "NOP");
+	DEFINE nop_sched := ((s_w[1] & op_c)=0b_00)  & ((s_w[2] & op_c)=0b_00) & ((s_r[1] & op_c)=0b_00) & ((s_r[2] & op_c)=0b_00);
+	DEFINE l_exl := l_num = 1 ? "1" : "2";
+	DEFINE l_s := l_num = 1 ? "1s" : "2s";
+	DEFINE WR_1 := state[1] = "WR" & (a_cell.lock = l_exl | a_cell.lock = "12s" | a_cell.lock = l_s); 
+	DEFINE WR_2 := state[2] = "WR" & (b_cell.lock = l_exl | b_cell.lock = "12s" | b_cell.lock = l_s); 
+	DEFINE WW_1 := state[1] = "WW" & a_cell.lock = l_exl; 
+	DEFINE WW_2 := state[2] = "WW" & b_cell.lock = l_exl; 
+ ASSIGN
+	init(state[1]) := "NOP";
+	init(state[2]) := "NOP";
+	init(op_c) := 0b_10;
+	init(finished):= FALSE;
+	next(op_c) := case
+		op_c = 0b_00: op_c;
+		op_state : op_c >> 1;
+		nop_state & nop_sched: op_c >> 1;
+		TRUE : op_c;
+	esac;
+	next(finished):= case
+		TRUE: TRUE;
+		op_state & op_c = 0b_01: TRUE;
+		TRUE: FALSE;
+	esac;
+	next(state[1]) := case
+		state[1] = "R" | state[1] = "W" : "NOP";
+		state[1] = "WR" & (a_cell.lock = l_exl | a_cell.lock = "12s" | a_cell.lock = l_s): "R";
+		state[1] = "WW" & a_cell.lock = l_exl : "W";
+		! finished & ((s_r[1] & op_c) = op_c)   : "WR";
+		! finished & ((s_w[1] & op_c) = op_c)   : "WW";
+		! finished & ((s_r[1] & op_c) = 0b_00)   & ((s_w[1] & op_c) = 0b_00	) : "NOP";
+		state[1] = "WR" | state[1] = "WW" : state[1];
+		TRUE: "NOP";
+	esac;
+	next(state[2]) := case
+		state[2] = "R" | state[2] = "W" : "NOP";
+		state[2] = "WR" & (b_cell.lock = l_exl | b_cell.lock = "12s" | b_cell.lock = l_s): "R";
+		state[2] = "WW" & b_cell.lock = l_exl : "W";
+		! finished & ((s_r[2] & op_c) = op_c)   : "WR";
+		! finished & ((s_w[2] & op_c) = op_c)   : "WW";
+		! finished & ((s_r[2] & op_c) = 0b_00)   & ((s_w[2] & op_c) = 0b_00	) : "NOP";
+		state[2] = "WR" | state[2] = "WW" : state[2];
+		TRUE: "NOP";
+	esac;
+	
+MODULE mem_block1(c_num,proc1,proc2)
+ VAR
+	lock: {"0","1","2","1s","2s","12s"};
+ ASSIGN
+	init(lock) := "0";
+	next(lock) := case
+	lock = "1" : proc1.finished ? "0" : "1";
+	lock = "2" : proc2.finished ? "0" : "2"; 
+	lock = "1s" : proc1.finished ? "0" : ((proc2.state[c_num] = "WR" & proc2.s_w[c_num] = 0b_00) ? "12s": "0");
+	lock = "2s" : proc2.finished ? "0" : ((proc1.state[c_num] = "WR" & proc1.s_w[c_num] = 0b_00) ? "12s": "0");
+	lock = "12s" : (proc1.finished & proc2.finished) ? "0" : (proc1.finished ? "2s" : (proc2.finished ? "1s" : "12s"));
+	(proc1.state[c_num] = "WW" & proc2.state[c_num] = "WW") : {"1","2"};
+	(proc1.state[c_num] = "WW" & (proc2.state[c_num] = "WR" & proc2.s_w[c_num] = 0b_00)) : {"1","2s"};
+	(proc2.state[c_num] = "WW" & (proc1.state[c_num] = "WR" & proc1.s_w[c_num] = 0b_00)) : {"2","1s"};
+	(proc1.state[c_num] = "WW" & proc2.state[c_num] = "WR" ) : {"1", "2"};
+	(proc2.state[c_num] = "WW" & proc1.state[c_num] = "WR" ) : {"1", "2"};
+	(proc1.state[c_num] = "WR" & proc1.s_w[c_num] = 0b_00) &(proc2.state[c_num] = "WR" & proc2.s_w[c_num] = 0b_00): "12s";
+	(proc1.state[c_num] = "WR" & proc1.s_w[c_num] = 0b_00) & (proc2.state[c_num] = "WR" ): {"1s","2"};
+	(proc2.state[c_num] = "WR" & proc2.s_w[c_num] = 0b_00) & (proc1.state[c_num] = "WR" ): {"2s","1"};
+	proc2.state[c_num] = "WR" & proc1.state[c_num] = "WR" : {"1","2"};
+	proc1.state[c_num] = "WW" | proc2.state[c_num] = "WW" : proc1.state[c_num] = "WW" ? "1" : "2";
+	proc1.state[c_num] = "WR" | proc2.state[c_num] = "WR" : proc1.state[c_num] = "WR" ? "1" : "2";
+	TRUE : "0";
+	esac;
+
+
+MODULE main
+ VAR
+	S1_w: array 1..2 of word[2];
+	S1_r: array 1..2 of word[2];
+	S2_w: array 1..2 of word[2];
+	S2_r: array 1..2 of word[2];
+ 	p1: mem_process1(1,acell,bcell,S1_w,S1_r);
+	p2: mem_process1(2,acell,bcell,S2_w,S2_r);
+	acell: mem_block1(1,p1,p2);
+  	bcell: mem_block1(2,p1,p2);
+
+

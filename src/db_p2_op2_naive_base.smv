@@ -1,60 +1,4 @@
-MODULE log(p1,p2)
- VAR
-	w_hist_1: array 1..2 of word[4];
-	r_hist_1: array 1..2 of word[4];
-	w_hist_2: array 1..2 of word[4];
-	r_hist_2: array 1..2 of word[4];
-	op_c: word[4];
- ASSIGN
-	init(w_hist_1[1]) := 0b_0000;
-	init(w_hist_1[2]) := 0b_0000;
-	init(r_hist_1[1]) := 0b_0000;
-	init(r_hist_1[2]) := 0b_0000;
-	init(w_hist_2[1]) := 0b_0000;
-	init(w_hist_2[2]) := 0b_0000;
-	init(r_hist_2[1]) := 0b_0000;
-	init(r_hist_2[2]) := 0b_0000;
-	init(op_c) := 0b_1000;
-	next(op_c) := case
-		p1.op_state | p2.op_state: op_c >> 1;
-		TRUE: op_c;
-	esac;
-	next(w_hist_1[1]) := case
-		p1.state[1] = "W": w_hist_1[1] + (0b_1111 & op_c);
-		TRUE: w_hist_1[1];
-	esac;
-	next(w_hist_1[2]) := case
-		p1.state[2] = "W": w_hist_1[2] + (0b_1111 & op_c);
-		TRUE: w_hist_1[2];
-	esac;
-	next(w_hist_2[1]) := case
-		p2.state[1] = "W": w_hist_2[1] + (0b_1111 & op_c);
-		TRUE: w_hist_2[1];
-	esac;
-	next(w_hist_2[2]) := case
-		p2.state[2] = "W": w_hist_2[2] + (0b_1111 & op_c);
-		TRUE: w_hist_2[2];
-	esac;
-	next(r_hist_1[1]) := case
-		p1.state[1] = "R": r_hist_1[1] + (0b_1111 & op_c);
-		TRUE: r_hist_1[1];
-	esac;
-	next(r_hist_1[2]) := case
-		p1.state[2] = "R": r_hist_1[2] + (0b_1111 & op_c);
-		TRUE: r_hist_1[2];
-	esac;
-	next(r_hist_2[1]) := case
-		p2.state[1] = "R": r_hist_2[1] + (0b_1111 & op_c);
-		TRUE: r_hist_2[1];
-	esac;
-	next(r_hist_2[2]) := case
-		p2.state[2] = "R": r_hist_2[2] + (0b_1111 & op_c);
-		TRUE: r_hist_2[2];
-	esac;
-
 MODULE mem_process1(l_num,a_cell,b_cell,s_w,s_r)
-
-
  VAR
  	state : array 1..2 of {"WW","WR","W","R","NOP"};
 	op_c : word[2];
@@ -134,5 +78,4 @@ MODULE main
 	p2: mem_process1(2,acell,bcell,S2_w,S2_r);
 	acell: mem_block1(1,p1,p2);
   	bcell: mem_block1(2,p1,p2);
-	l: log(p1,p2);
 

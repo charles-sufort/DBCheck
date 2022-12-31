@@ -110,7 +110,3 @@ MODULE main
 	p2: mem_process1(2,acell,bcell,S2_w,S2_r);
 	acell: mem_block1(1,p1,p2,o);
   	bcell: mem_block1(2,p1,p2,o);
-
- SPEC AG(p1.state[1] = "W" -> ! (EF ((p1.finished != TRUE) & ((p2.state[1] = "W"| p2.state[1] = "R")))))
- SPEC AG(p2.state[1] = "W" ->  (AG p1.state[1] !="W"))
- SPEC AF(p1.finished & p2.finished)
