@@ -40,7 +40,7 @@ MODULE mem_process1(l_num,a_cell,b_cell,s_w,s_r)
 	next(finished):= case
 		finished: TRUE;
 		op_state & op_c = 0b_01: TRUE;
-		(op_c = 0b_0001) & nop_sched : TRUE;
+		(op_c = 0b_01) & nop_sched : TRUE;
 		TRUE: FALSE;
 	esac;
 	next(state[1]) := case

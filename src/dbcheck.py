@@ -77,18 +77,20 @@ def gen_schedule_smv(s,model):
         T += "    o := 1;\n\n" 
     return T
 
-def gen_specs_smv():
+def gen_specs_smv(model):
     # Deadlock
     T = ""
     T += " SPEC AF( p1.finished & p2.finished)\n "
+    if model == "naive" or model == "sched":
+        T += " LTLSPEC G(((acell.lock = 1 ) & (X (acell.lock = 0 ))) -> X ( G (acell.lock != 1  )))"
+    elif model == "2pl" or model == "c2pl":
+        T += " LTLSPEC G(((acell.lock = \"1\" | acell.lock = \"1s\" | acell.lock = \"12s\") & (X (acell.lock = \"0\" | acell.lock = \"2s\"))) -> X ( G ((acell.lock != \"1\") & (acell.lock != \"1s\") & (acell.lock != \"12s\"))))"
+
     # WW,WR,RW 
+
     E = [["\"W\"","\"W\""],["\"R\"","\"W\""],["\"W\"","\"R\""]]
     for e in E:
-        for i in range(2):
-            for j in range(2):
-                i_1 = (i%2)+1
-                i_2 = ((i+1)%2)+1
-                T += " SPEC AG((p{}.state[{}] = {})-> ( ( !EF ((p{}.state[{}] = {}) & (!(p{}.finished)) ))))\n".format(i_1,j+1,e[0],i_2,j+1,e[1],i_1)
+        T += " SPEC AG((p1.state[1] = {})-> ( ( !EF ((p2.state[1] = {}) & (!(p1.finished)) ))))\n".format(e[0],e[1])
 
     return T
 
@@ -111,13 +113,12 @@ def get_smv_base(path):
 def test_smv(Si, base_text,i,n,k,model):
     text = base_text
     text += gen_schedule_smv(Si,model)
-    text += gen_specs_smv()
+    text += gen_specs_smv(model)
     smv_file = "test.smv"
     path = "tmp/{}".format(smv_file)
     with open(path,"w") as fo:
         fo.write(text)
     cmd = "NuSMV {} > tmp/results.out".format(path)
-
     os.system(cmd)
     results = ""
     with open("tmp/results.out",'r') as fo:
@@ -128,16 +129,17 @@ def test_smv(Si, base_text,i,n,k,model):
     FS = p.findall(results)
     return [TS,FS]
 
-def results_update(R,Ri,i,n,SP):
+def results_update(R,Ri,i,n,SP,verbose=True):
     for s in Ri[0]:
         c_s = SP[s]
         R["SPECS"][c_s][0] += 1
     for s in Ri[1]:
         c_s = SP[s]
         R["SPECS"][c_s][1].append(i)
-    print("iteration {} / {}".format(i+1,n))
-    for s in R["SPECS"]:
-        print("spec {}: {}/{}".format(R["SPECS"][s][2],R["SPECS"][s][0],i+1))
+    if verbose:
+        print("iteration {} / {}".format(i+1,n))
+        for s in R["SPECS"]:
+            print("spec {}: {}/{}".format(R["SPECS"][s][2],R["SPECS"][s][0],i+1))
 
 def results_save(R,name):
     path = "tmp/" + name
@@ -145,7 +147,7 @@ def results_save(R,name):
         json.dump(R,fo)
 
 
-def test_model(model,k):    
+def test_model(model,k,verbose=True):    
     file_base = ""
     match model:
         case "2pl":
@@ -182,10 +184,13 @@ def test_model(model,k):
         c += 1
     for i in range(1,len(S)):
         R_i = test_smv(S[i],base_text,i,len(S),k,model)
-        results_update(R,R_i,i,len(S),SP)
+        results_update(R,R_i,i,len(S),SP,verbose)
     R["S"] = S
+    finish = time()
+    R["time"] = finish-start
     file_name = file_base + ".json"
     results_save(R,file_name)
+
 
 if __name__ == "__main__":
     mode = sys.argv[1]
@@ -193,7 +198,10 @@ if __name__ == "__main__":
         case "tester":
             model = sys.argv[2]
             k = int(sys.argv[3])
-            test_model(model,k)
+            if len(sys.argv) == 5:
+                test_model(model,k,False)
+            else:
+                test_model(model,k)
         case "results":
             name = sys.argv[2]
             path = "tmp/" + name
@@ -202,8 +210,8 @@ if __name__ == "__main__":
                 R1 = {}
                 for s in R["SPECS"]:
                     R1[s] = [R["SPECS"][s][0],R["SPECS"][s][2]]
-
                 pprint(R1)
+                print("time: {}".format(R["time"]))
         case "results_diff":
             name = sys.argv[2]
             i = sys.argv[3]
@@ -216,6 +224,15 @@ if __name__ == "__main__":
                 I = I_i.difference(I_j)
                 print(R["SPECS"][i][2])
                 print(R["SPECS"][j][2])
+                print(I)
+        case "results_spec":
+            name = sys.argv[2]
+            spec = sys.argv[3]
+            path = "tmp/" + name
+            with open(path,"r") as fo:
+                R = json.load(fo)
+                I = R["SPECS"][spec][1]
+                print(R["SPECS"][spec][2])
                 print(I)
         case "test_index":
             model = sys.argv[2]

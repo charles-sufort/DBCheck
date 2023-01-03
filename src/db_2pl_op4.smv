@@ -98,6 +98,7 @@ MODULE main
  	S2_w[2] := 0b_1001;
  	S2_r[2] := 0b_0000;
 
+ LTLSPEC G(((acell.lock = "1" | acell.lock = "1s" | acell.lock = "12s") & (X (acell.lock = "0" | acell.lock = "2s"))) -> X ( G ((acell.lock != "1") & (acell.lock != "1s") & (acell.lock != "12s"))))
  SPEC AG(p1.state[1] = "W" -> ! (EF ((p1.finished != TRUE) & ((p2.state[1] = "W"| p2.state[1] = "R")))))
  SPEC AG(p1.state[1] = "W" -> ! (EF p2.state[1] ="W"))
  SPEC AF(p1.finished & p2.finished)
