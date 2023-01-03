@@ -1,0 +1,14 @@
+\section{2PL}
+2PL or two phase locking is one standard used to ensure serializability. 2PL, as the name implies, involves the use of two lock phases for processes.
+
+\begin{enumerate}
+\item Growing Phase: The process obtains all its locks and does not release any.
+\item Shrinking Phase: The process releases all its locks and does not obtain any new ones.
+\end{enumerate}
+
+2PL is stated to guarantee serializability. There are a number of variations of 2pl, with the most widely used being Strict 2PL \cite{textbook}. According to \cite{textbook}, Strict 2PL has two rules 
+“If a transaction T wants to read (respectively, modify an object, it first requests a shared (respectively, exclusive) lock on the object.”
+“ All locks held by a transaction are released when the transaction is completed.”
+In practice, an architect of a DBMS (database management system) using this protocol may expect that the serializable property will hold. In the rest of the work, the testing of this property and others will be explored. A precise formal analysis of the properties of the protocol will not be taken. The protocol instead will be tested with respect to a computational model for concurrent execution which has been defined by the author.
+
+

@@ -1,0 +1,60 @@
+
+% latex-sample.tex
+%
+% This LaTeX source file provides a template for a typical research paper.
+%
+
+%
+% Use the standard article template.
+%
+\documentclass[12pt, a4paper, twocolumn]{article}
+
+% The geometry package allows for easy page formatting.
+\usepackage{geometry}
+\usepackage{multicol}
+\usepackage{float}
+\geometry{letterpaper}
+
+% Load up special logo commands.
+\usepackage{doc}
+
+% Package for formatting URLs.
+\usepackage{url}
+
+% Packages and definitions for graphics files.
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\title{DBCheck: Model-Based Concurrency Verification}
+\author{Charles Dake}
+\date{}
+
+%
+% Set the title, author, and date.
+%
+
+%
+% The document proper.
+%
+\begin{document}
+
+% Add the title section.
+
+% Add an abstract.
+
+
+\maketitle
+\input{abstract}
+% Body text.
+%
+\input{introduction}
+\input{databaseconcurrency}
+\input{2pl}
+\input{nusmv}
+\input{ctl}
+\input{dbcheck_sect}
+\input{testing}
+\input{conclusion}
+\bibliographystyle{plain}
+\bibliography{dbcheck}
+
+\end{document}

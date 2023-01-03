@@ -1,0 +1,4 @@
+\section{Database Concurrency and Serializability}
+In the design of DBMS systems, one design standard is that database transactions possess the ACID property (atomicity, consistency, isolation, durability) \cite{textbook}. The database model’s concurrency is one source of problems for these properties. An improperly implemented concurrency model can create inconsistent database states, make the database inoperable due to things like deadlock, and corrupt the database in the instance of failure. Concurrency models can be improved by making sure the execution of database transactions is serializable. This ensures that transactions which are executed concurrently have a serializable schedule such that their effect won’t differ from a non-concurrent order of execution.
+
+
